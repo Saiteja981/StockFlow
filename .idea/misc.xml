@@ -5,6 +5,9 @@
     <option name="originalFiles">
       <list>
         <option value="$PROJECT_DIR$/Inventory-management-system-main/inventory_management_system/pom.xml" />
+        <option value="$PROJECT_DIR$/Inventory-management-system-main/inventory_management_system/backend/pom.xml" />
+        <option value="$PROJECT_DIR$/Smart Inventory &amp; Stock Management/Smart Inventory &amp; Stock Management/backend/pom.xml" />
+        <option value="$PROJECT_DIR$/Smart Inventory and Stock Management/Smart Inventory and Stock Management/backend/pom.xml" />
       </list>
     </option>
   </component>

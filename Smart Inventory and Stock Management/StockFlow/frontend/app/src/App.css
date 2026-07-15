@@ -1,0 +1,158 @@
+.App {
+  min-height: 100vh;
+  background-color: #f4f6f9;
+}
+
+/* Card Styles */
+.card {
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s, box-shadow 0.3s;
+  margin-top: 20px;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Table Styles */
+.table {
+  background: white;
+}
+
+.table thead th {
+  background-color: #343a40;
+  color: white;
+  border: none;
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(13, 110, 253, 0.05);
+}
+
+/* Button Styles */
+.btn {
+  border-radius: 5px;
+  font-weight: 500;
+  padding: 8px 20px;
+}
+
+.btn-lg {
+  padding: 12px 30px;
+  font-size: 18px;
+}
+
+/* Dashboard Card Hover Effect */
+.dashboard-card {
+  transition: transform 0.3s;
+}
+
+.dashboard-card:hover {
+  transform: scale(1.05);
+}
+
+/* Form Styles */
+.form-control:focus {
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Badge Styles */
+.badge {
+  padding: 5px 10px;
+  font-weight: 500;
+  border-radius: 4px;
+}
+
+/* Input Group Styles */
+.input-group-text {
+  background-color: #e9ecef;
+  border-right: none;
+}
+
+.input-group .form-control {
+  border-left: none;
+}
+
+.input-group .form-control:focus {
+  border-left: none;
+  box-shadow: none;
+}
+
+.input-group:hover .form-control {
+  border-color: #86b7fe;
+}
+
+.input-group:hover .input-group-text {
+  border-color: #86b7fe;
+}
+
+/* Login/Register Page Styles */
+.card-header {
+  border-bottom: none;
+  border-radius: 10px 10px 0 0 !important;
+}
+
+.card-body {
+  border-radius: 0 0 10px 10px;
+}
+
+/* Navbar Dropdown */
+.dropdown-menu {
+  border: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+
+.dropdown-item {
+  padding: 8px 20px;
+  transition: background 0.2s;
+}
+
+.dropdown-item:hover {
+  background-color: #f8f9fa;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+    padding: 10px;
+  }
+
+  .btn-lg {
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+
+  .card {
+    margin-top: 10px;
+  }
+}
+
+/* Dashboard Title Styles */
+.dashboard-title {
+  color: #212529 !important;
+  font-weight: 600;
+  font-size: 28px;
+}
+
+/* Dark Mode Support */
+[data-theme="dark"] .dashboard-title {
+  color: #ffffff !important;
+}
+
+/* Center the heading */
+.text-center {
+  text-align: center !important;
+}
+
+/* Dashboard card hover effect */
+.dashboard-card {
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
