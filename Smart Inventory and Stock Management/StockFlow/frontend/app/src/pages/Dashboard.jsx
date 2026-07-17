@@ -3,12 +3,17 @@ import { Link } from 'react-router-dom'
 import { FaChartLine } from 'react-icons/fa'
 import { productApi, purchaseApi, salesApi } from '../services/api'
 import LowStockAlert from '../components/common/LowStockAlert'
+import { useCurrency } from '../context/CurrencyContext'
+import { formatCurrency } from '../utils/currencyUtils'
 
 const Dashboard = () => {
+    const { currency } = useCurrency() // ✅ Get current currency
     const [stats, setStats] = useState({
         totalProducts: 0,
         totalPurchases: 0,
-        totalSales: 0
+        totalSales: 0,
+        totalRevenue: 0,      // ✅ Added revenue
+        totalPurchaseAmount: 0 // ✅ Added purchase amount
     })
     const [loading, setLoading] = useState(true)
 
@@ -24,10 +29,22 @@ const Dashboard = () => {
                 salesApi.getAll()
             ])
 
+            // ✅ Calculate total revenue from sales
+            const totalRevenue = salesRes.data.reduce((sum, sale) =>
+                sum + (sale.totalAmount || sale.quantitySold * sale.sellingPrice || 0), 0
+            )
+
+            // ✅ Calculate total purchase amount
+            const totalPurchaseAmount = purchasesRes.data.reduce((sum, purchase) =>
+                sum + (purchase.totalCost || purchase.quantity * purchase.purchasePrice || 0), 0
+            )
+
             setStats({
                 totalProducts: productsRes.data.length || 0,
                 totalPurchases: purchasesRes.data.length || 0,
-                totalSales: salesRes.data.length || 0
+                totalSales: salesRes.data.length || 0,
+                totalRevenue: totalRevenue,
+                totalPurchaseAmount: totalPurchaseAmount
             })
             setLoading(false)
         } catch (error) {
@@ -50,7 +67,7 @@ const Dashboard = () => {
         <>
             <LowStockAlert threshold={10} />
 
-            {/* Centered Heading with RED Color */}
+            {/* Centered Heading */}
             <div className="text-center mb-4">
                 <h2
                     className="dashboard-title"
@@ -120,7 +137,7 @@ const Dashboard = () => {
             </div>
 
             <div className="row mt-4">
-                <div className="col-md-4">
+                <div className="col-md-4 mb-3">
                     <div className="card text-white bg-primary">
                         <div className="card-body text-center">
                             <h5>Total Products</h5>
@@ -128,19 +145,41 @@ const Dashboard = () => {
                         </div>
                     </div>
                 </div>
-                <div className="col-md-4">
+                <div className="col-md-4 mb-3">
                     <div className="card text-white bg-success">
+                        <div className="card-body text-center">
+                            <h5>Total Revenue</h5>
+                            {/* ✅ Format revenue with currency */}
+                            <h2>{formatCurrency(stats.totalRevenue, currency)}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div className="col-md-4 mb-3">
+                    <div className="card text-white bg-info">
+                        <div className="card-body text-center">
+                            <h5>Total Sales</h5>
+                            <h2>{stats.totalSales}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ✅ Additional Stats Row */}
+            <div className="row mt-2">
+                <div className="col-md-6 mb-3">
+                    <div className="card text-white bg-warning">
                         <div className="card-body text-center">
                             <h5>Total Purchases</h5>
                             <h2>{stats.totalPurchases}</h2>
                         </div>
                     </div>
                 </div>
-                <div className="col-md-4">
-                    <div className="card text-white bg-info">
+                <div className="col-md-6 mb-3">
+                    <div className="card text-white bg-secondary">
                         <div className="card-body text-center">
-                            <h5>Total Sales</h5>
-                            <h2>{stats.totalSales}</h2>
+                            <h5>Total Purchase Amount</h5>
+                            {/* ✅ Format purchase amount with currency */}
+                            <h2>{formatCurrency(stats.totalPurchaseAmount, currency)}</h2>
                         </div>
                     </div>
                 </div>

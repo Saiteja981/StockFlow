@@ -12,14 +12,66 @@ import {
     FaShoppingCart,
     FaDollarSign,
     FaHome,
-    FaCamera  // ✅ Make sure this is imported
+    FaCamera,
+    FaBell,
+    FaFileInvoice,
+    FaBuilding,
+    FaCreditCard,
+    FaShieldAlt  // ✅ Added for 2FA
 } from 'react-icons/fa'
+
+// ✅ Import Currency Selector
+import CurrencySelector from './CurrencySelector'
+
+// ✅ Permission functions
+const hasPermission = (userRole, permission) => {
+    if (userRole === 'Admin') return true
+
+    if (userRole === 'Manager') {
+        const managerPermissions = [
+            'dashboard', 'analytics', 'products', 'purchase',
+            'sales', 'stockReport', 'reorderSettings', 'suppliers'
+        ]
+        return managerPermissions.includes(permission)
+    }
+
+    if (userRole === 'User') {
+        const userPermissions = ['dashboard', 'products', 'sales']
+        return userPermissions.includes(permission)
+    }
+
+    return false
+}
+
+const getUserRole = () => {
+    try {
+        const userData = localStorage.getItem('user')
+        if (userData) {
+            const user = JSON.parse(userData)
+            return user.role || 'User'
+        }
+    } catch (e) {
+        console.error('Error getting user role:', e)
+    }
+    return 'User'
+}
+
+// ✅ Get role info for display
+const getRoleInfo = (role) => {
+    const roleInfo = {
+        'Admin': { label: 'Admin', color: 'danger', icon: '👑' },
+        'Manager': { label: 'Manager', color: 'warning', icon: '📋' },
+        'User': { label: 'User', color: 'info', icon: '👤' }
+    }
+    return roleInfo[role] || roleInfo['User']
+}
 
 const Navbar = () => {
     const navigate = useNavigate()
     const location = useLocation()
     const [isLoggedIn, setIsLoggedIn] = useState(false)
     const [user, setUser] = useState(null)
+    const [userRole, setUserRole] = useState('User')
     const [dropdownOpen, setDropdownOpen] = useState(false)
     const [moreDropdownOpen, setMoreDropdownOpen] = useState(false)
 
@@ -34,7 +86,9 @@ const Navbar = () => {
             const userData = localStorage.getItem('user')
             if (userData) {
                 try {
-                    setUser(JSON.parse(userData))
+                    const parsed = JSON.parse(userData)
+                    setUser(parsed)
+                    setUserRole(parsed.role || 'User')
                 } catch (e) {
                     console.error('Error parsing user data:', e)
                 }
@@ -55,11 +109,32 @@ const Navbar = () => {
         }
     }
 
-    // ✅ Scan button handler
     const handleScanClick = () => {
         console.log('📷 Scan button clicked from Navbar')
         window.dispatchEvent(new CustomEvent('openBarcodeScanner'))
     }
+
+    // ✅ Check permissions
+    const canViewAnalytics = hasPermission(userRole, 'analytics')
+    const canViewPurchase = hasPermission(userRole, 'purchase')
+    const canViewCustomers = hasPermission(userRole, 'customers')
+    const canViewBulkImport = hasPermission(userRole, 'bulkImport')
+    const canViewStockReport = hasPermission(userRole, 'stockReport')
+    const canViewReorderSettings = hasPermission(userRole, 'reorderSettings')
+    const canViewSuppliers = hasPermission(userRole, 'suppliers')
+    const canViewPaymentGateway = hasPermission(userRole, 'paymentGateway')
+    const canViewForecasting = hasPermission(userRole, 'forecasting')
+    const canViewRealtimeDashboard = hasPermission(userRole, 'dashboard')
+    const canViewProfitLoss = hasPermission(userRole, 'profitLoss')
+    const canView2FA = hasPermission(userRole, '2fa')
+
+    // ✅ Check if user has any "More" items
+    const hasMoreItems = canViewForecasting || canViewCustomers || canViewBulkImport ||
+        canViewSuppliers || canViewStockReport || canViewReorderSettings ||
+        canViewPaymentGateway || canViewProfitLoss || canView2FA
+
+    // ✅ Get role info
+    const roleInfo = getRoleInfo(userRole)
 
     return (
         <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -77,30 +152,43 @@ const Navbar = () => {
                 </button>
                 <div className="collapse navbar-collapse" id="navbarNav">
                     <ul className="navbar-nav me-auto">
+                        {/* Dashboard - Everyone */}
                         <li className="nav-item">
                             <Link className="nav-link" to="/">
                                 <FaHome className="me-1" />
                                 Dashboard
                             </Link>
                         </li>
-                        <li className="nav-item">
-                            <Link className="nav-link" to="/analytics">
-                                <FaChartLine className="me-1" />
-                                Analytics
-                            </Link>
-                        </li>
+
+                        {/* Analytics - Admin & Manager only */}
+                        {canViewAnalytics && (
+                            <li className="nav-item">
+                                <Link className="nav-link" to="/analytics">
+                                    <FaChartLine className="me-1" />
+                                    Analytics
+                                </Link>
+                            </li>
+                        )}
+
+                        {/* Products - Everyone */}
                         <li className="nav-item">
                             <Link className="nav-link" to="/products">
                                 <FaBox className="me-1" />
                                 Products
                             </Link>
                         </li>
-                        <li className="nav-item">
-                            <Link className="nav-link" to="/purchase">
-                                <FaShoppingCart className="me-1" />
-                                Purchase
-                            </Link>
-                        </li>
+
+                        {/* Purchase - Admin & Manager only */}
+                        {canViewPurchase && (
+                            <li className="nav-item">
+                                <Link className="nav-link" to="/purchase">
+                                    <FaShoppingCart className="me-1" />
+                                    Purchase
+                                </Link>
+                            </li>
+                        )}
+
+                        {/* Sales - Everyone */}
                         <li className="nav-item">
                             <Link className="nav-link" to="/sales">
                                 <FaDollarSign className="me-1" />
@@ -108,7 +196,7 @@ const Navbar = () => {
                             </Link>
                         </li>
 
-                        {/* ✅ Scan Button */}
+                        {/* Scan - Everyone */}
                         <li className="nav-item">
                             <button
                                 className="nav-link"
@@ -126,80 +214,204 @@ const Navbar = () => {
                             </button>
                         </li>
 
-                        {/* More Dropdown */}
-                        <li className="nav-item dropdown" style={{ position: 'relative' }}>
-                            <button
-                                className="nav-link dropdown-toggle"
-                                onClick={() => setMoreDropdownOpen(!moreDropdownOpen)}
-                                style={{
-                                    color: 'white',
-                                    background: 'transparent',
-                                    border: 'none',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                More
-                            </button>
-                            {moreDropdownOpen && (
-                                <ul
-                                    className="dropdown-menu show"
+                        {/* Live Dashboard - Admin & Manager only */}
+                        {canViewRealtimeDashboard && (
+                            <li className="nav-item">
+                                <Link className="nav-link" to="/realtime-dashboard">
+                                    <FaBell className="me-1" />
+                                    Live
+                                </Link>
+                            </li>
+                        )}
+
+                        {/* ✅ More Dropdown - Only show if there are items */}
+                        {hasMoreItems && (
+                            <li className="nav-item dropdown">
+                                <button
+                                    className="nav-link dropdown-toggle"
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        setMoreDropdownOpen(!moreDropdownOpen)
+                                    }}
                                     style={{
-                                        position: 'absolute',
-                                        left: 0,
-                                        top: '100%',
-                                        display: 'block',
-                                        minWidth: '200px',
-                                        padding: '8px 0',
-                                        zIndex: 1000
+                                        background: 'none',
+                                        border: 'none',
+                                        color: 'white',
+                                        cursor: 'pointer'
                                     }}
                                 >
-                                    <li>
-                                        <Link
-                                            className="dropdown-item"
-                                            to="/forecasting"
-                                            onClick={() => setMoreDropdownOpen(false)}
-                                        >
-                                            <FaChartLine className="me-2" /> Forecasting
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link
-                                            className="dropdown-item"
-                                            to="/customers"
-                                            onClick={() => setMoreDropdownOpen(false)}
-                                        >
-                                            <FaUsers className="me-2" /> Customers
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link
-                                            className="dropdown-item"
-                                            to="/bulk-import"
-                                            onClick={() => setMoreDropdownOpen(false)}
-                                        >
-                                            <FaUpload className="me-2" /> Bulk Import
-                                        </Link>
-                                    </li>
-                                </ul>
-                            )}
-                        </li>
+                                    More
+                                </button>
+                                {moreDropdownOpen && (
+                                    <ul
+                                        className="dropdown-menu show"
+                                        style={{
+                                            position: 'absolute',
+                                            left: 0,
+                                            top: '100%',
+                                            display: 'block',
+                                            minWidth: '220px',
+                                            padding: '8px 0',
+                                            zIndex: 1000,
+                                            backgroundColor: '#fff',
+                                            borderRadius: '8px',
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                                        }}
+                                    >
+                                        {canViewForecasting && (
+                                            <li>
+                                                <Link
+                                                    className="dropdown-item"
+                                                    to="/forecasting"
+                                                    onClick={() => setMoreDropdownOpen(false)}
+                                                >
+                                                    <FaChartLine className="me-2" /> Forecasting
+                                                </Link>
+                                            </li>
+                                        )}
+
+                                        {canViewCustomers && (
+                                            <li>
+                                                <Link
+                                                    className="dropdown-item"
+                                                    to="/customers"
+                                                    onClick={() => setMoreDropdownOpen(false)}
+                                                >
+                                                    <FaUsers className="me-2" /> Customers
+                                                </Link>
+                                            </li>
+                                        )}
+
+                                        {canViewBulkImport && (
+                                            <li>
+                                                <Link
+                                                    className="dropdown-item"
+                                                    to="/bulk-import"
+                                                    onClick={() => setMoreDropdownOpen(false)}
+                                                >
+                                                    <FaUpload className="me-2" /> Bulk Import
+                                                </Link>
+                                            </li>
+                                        )}
+
+                                        {canViewSuppliers && (
+                                            <li>
+                                                <Link
+                                                    className="dropdown-item"
+                                                    to="/suppliers"
+                                                    onClick={() => setMoreDropdownOpen(false)}
+                                                >
+                                                    <FaBuilding className="me-2" /> Suppliers
+                                                </Link>
+                                            </li>
+                                        )}
+
+                                        <li><hr className="dropdown-divider" /></li>
+
+                                        {canViewStockReport && (
+                                            <li>
+                                                <Link
+                                                    className="dropdown-item"
+                                                    to="/stock-report"
+                                                    onClick={() => setMoreDropdownOpen(false)}
+                                                >
+                                                    <FaBox className="me-2" /> Stock Report
+                                                </Link>
+                                            </li>
+                                        )}
+
+                                        {canViewReorderSettings && (
+                                            <li>
+                                                <Link
+                                                    className="dropdown-item"
+                                                    to="/reorder-settings"
+                                                    onClick={() => setMoreDropdownOpen(false)}
+                                                >
+                                                    <FaBell className="me-2" /> Reorder Settings
+                                                </Link>
+                                            </li>
+                                        )}
+
+                                        {canViewPaymentGateway && (
+                                            <li>
+                                                <Link
+                                                    className="dropdown-item"
+                                                    to="/payment-gateway"
+                                                    onClick={() => setMoreDropdownOpen(false)}
+                                                >
+                                                    <FaCreditCard className="me-2" /> Payment
+                                                </Link>
+                                            </li>
+                                        )}
+
+                                        {/* ✅ Profit & Loss - NEW */}
+                                        {canViewProfitLoss && (
+                                            <li>
+                                                <Link
+                                                    className="dropdown-item"
+                                                    to="/profit-loss"
+                                                    onClick={() => setMoreDropdownOpen(false)}
+                                                >
+                                                    <FaChartLine className="me-2" /> Profit & Loss
+                                                </Link>
+                                            </li>
+                                        )}
+
+                                        {/* ✅ 2FA - NEW */}
+                                        {canView2FA && (
+                                            <li>
+                                                <Link
+                                                    className="dropdown-item"
+                                                    to="/2fa"
+                                                    onClick={() => setMoreDropdownOpen(false)}
+                                                >
+                                                    <FaShieldAlt className="me-2" /> 2FA
+                                                </Link>
+                                            </li>
+                                        )}
+
+                                        <li><hr className="dropdown-divider" /></li>
+
+                                        {canViewPaymentGateway && (
+                                            <li>
+                                                <Link
+                                                    className="dropdown-item"
+                                                    to="/invoice/1"
+                                                    onClick={() => setMoreDropdownOpen(false)}
+                                                >
+                                                    <FaFileInvoice className="me-2" /> Invoice
+                                                </Link>
+                                            </li>
+                                        )}
+                                    </ul>
+                                )}
+                            </li>
+                        )}
                     </ul>
 
                     <ul className="navbar-nav ms-auto">
+                        {/* ✅ Currency Selector */}
+                        <li className="nav-item me-2" style={{ display: 'flex', alignItems: 'center' }}>
+                            <CurrencySelector />
+                        </li>
+
                         {isLoggedIn ? (
-                            <li className="nav-item dropdown" style={{ position: 'relative' }}>
+                            <li className="nav-item dropdown">
                                 <button
                                     className="nav-link dropdown-toggle"
-                                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        setDropdownOpen(!dropdownOpen)
+                                    }}
                                     style={{
-                                        color: 'white',
-                                        background: 'transparent',
+                                        background: 'none',
                                         border: 'none',
+                                        color: 'white',
                                         cursor: 'pointer'
                                     }}
                                 >
                                     <FaUser className="me-1" />
-                                    {user?.name || 'Admin'}
+                                    {user?.name || 'User'} {roleInfo.icon} ({userRole})
                                 </button>
                                 {dropdownOpen && (
                                     <ul
@@ -211,7 +423,10 @@ const Navbar = () => {
                                             display: 'block',
                                             minWidth: '200px',
                                             padding: '8px 0',
-                                            zIndex: 1000
+                                            zIndex: 1000,
+                                            backgroundColor: '#fff',
+                                            borderRadius: '8px',
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
                                         }}
                                     >
                                         <li>
@@ -223,15 +438,17 @@ const Navbar = () => {
                                                 <FaUser className="me-2" /> Profile
                                             </Link>
                                         </li>
-                                        <li>
-                                            <Link
-                                                className="dropdown-item"
-                                                to="/analytics"
-                                                onClick={() => setDropdownOpen(false)}
-                                            >
-                                                <FaChartLine className="me-2" /> Analytics
-                                            </Link>
-                                        </li>
+                                        {canViewAnalytics && (
+                                            <li>
+                                                <Link
+                                                    className="dropdown-item"
+                                                    to="/analytics"
+                                                    onClick={() => setDropdownOpen(false)}
+                                                >
+                                                    <FaChartLine className="me-2" /> Analytics
+                                                </Link>
+                                            </li>
+                                        )}
                                         <li><hr className="dropdown-divider" /></li>
                                         <li>
                                             <button className="dropdown-item text-danger" onClick={handleLogout}>

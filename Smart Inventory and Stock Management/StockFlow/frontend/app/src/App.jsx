@@ -24,6 +24,20 @@ import { toast } from 'react-toastify'
 import CheckoutPage from './pages/CheckoutPage'
 import PaymentSuccess from './pages/PaymentSuccess'
 
+// ✅ Import Priority 1 Features
+import StockReport from './pages/StockReport'
+import ReorderSettings from './pages/ReorderSettings'
+import InvoiceGenerator from './pages/InvoiceGenerator'
+
+// ✅ Import New Features
+import SuppliersPage from './pages/SuppliersPage'
+import RealtimeDashboard from './pages/RealtimeDashboard'
+import PaymentGateway from './pages/PaymentGateway'
+
+// ✅ Import Priority 1 - High Impact Features
+import ProfitLossDashboard from './pages/ProfitLossDashboard'
+import TwoFactorAuth from './pages/TwoFactorAuth'
+
 import './App.css'
 
 const ProtectedRoute = ({ children }) => {
@@ -53,7 +67,6 @@ function App() {
             const response = await productApi.getAll()
             const products = response.data
 
-            // Try to find product by ID
             const product = products.find(p =>
                 String(p.id || p.productId) === String(barcode)
             )
@@ -167,7 +180,7 @@ function App() {
                             } />
 
                             {/* ================================
-                                ✅ PAYMENT ROUTES (NEW)
+                                ✅ PAYMENT ROUTES
                             ================================ */}
                             <Route path="/checkout" element={
                                 <ProtectedRoute>
@@ -177,6 +190,71 @@ function App() {
                             <Route path="/payment-success" element={
                                 <ProtectedRoute>
                                     <PaymentSuccess />
+                                </ProtectedRoute>
+                            } />
+
+                            {/* ================================
+                                ✅ PRIORITY 1 FEATURES
+                            ================================ */}
+                            {/* Stock Report */}
+                            <Route path="/stock-report" element={
+                                <ProtectedRoute>
+                                    <StockReport />
+                                </ProtectedRoute>
+                            } />
+
+                            {/* Reorder Settings */}
+                            <Route path="/reorder-settings" element={
+                                <ProtectedRoute>
+                                    <ReorderSettings />
+                                </ProtectedRoute>
+                            } />
+
+                            {/* Invoice Generator */}
+                            <Route path="/invoice/:id" element={
+                                <ProtectedRoute>
+                                    <InvoiceGenerator />
+                                </ProtectedRoute>
+                            } />
+
+                            {/* ================================
+                                ✅ NEW FEATURES
+                            ================================ */}
+                            {/* Supplier Management */}
+                            <Route path="/suppliers" element={
+                                <ProtectedRoute>
+                                    <SuppliersPage />
+                                </ProtectedRoute>
+                            } />
+
+                            {/* Real-time Dashboard */}
+                            <Route path="/realtime-dashboard" element={
+                                <ProtectedRoute>
+                                    <RealtimeDashboard />
+                                </ProtectedRoute>
+                            } />
+
+                            {/* Payment Gateway */}
+                            <Route path="/payment-gateway" element={
+                                <ProtectedRoute>
+                                    <PaymentGateway />
+                                </ProtectedRoute>
+                            } />
+
+                            {/* ================================
+                                ✅ PRIORITY 1 - HIGH IMPACT FEATURES
+                            ================================ */}
+                            {/* Profit & Loss Dashboard */}
+                            <Route path="/profit-loss" element={
+                                <ProtectedRoute>
+                                    <ProfitLossDashboard />
+                                </ProtectedRoute>
+                            } />
+
+                            {/* Two-Factor Authentication */}
+                            <Route path="/2fa" element={
+                                <ProtectedRoute>
+                                    <TwoFactorAuth />
                                 </ProtectedRoute>
                             } />
                         </Routes>

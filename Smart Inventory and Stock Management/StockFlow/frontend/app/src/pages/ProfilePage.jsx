@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { FaUser, FaEnvelope, FaPhone, FaLock, FaSave, FaUserEdit, FaPalette, FaBell } from 'react-icons/fa'
+import { FaUser, FaEnvelope, FaPhone, FaLock, FaSave, FaUserEdit, FaPalette, FaBell, FaCheckCircle, FaTimesCircle } from 'react-icons/fa'
 import { useTheme } from '../context/ThemeContext'
+import { getUserRole, getFeatures, getRoleInfo } from '../utils/roles'
 
 const ProfilePage = () => {
     const { theme, toggleTheme } = useTheme()
@@ -10,14 +11,17 @@ const ProfilePage = () => {
         name: '',
         email: '',
         phone: '',
-        role: 'Admin'
+        role: 'User'
     })
     const [loading, setLoading] = useState(false)
     const [message, setMessage] = useState('')
     const [error, setError] = useState('')
+    const [userRole, setUserRole] = useState('User')
+    const [userFeatures, setUserFeatures] = useState([])
 
     useEffect(() => {
         loadUserData()
+        loadRoleInfo()
     }, [])
 
     const loadUserData = () => {
@@ -26,15 +30,22 @@ const ProfilePage = () => {
             try {
                 const parsed = JSON.parse(userData)
                 setUser({
-                    name: parsed.name || 'Admin',
-                    email: parsed.email || 'admin@example.com',
+                    name: parsed.name || 'User',
+                    email: parsed.email || 'user@example.com',
                     phone: parsed.phone || '+1 234 567 8900',
-                    role: parsed.role || 'Admin'
+                    role: parsed.role || 'User'
                 })
+                setUserRole(parsed.role || 'User')
             } catch (e) {
                 console.error('Error loading user data:', e)
             }
         }
+    }
+
+    const loadRoleInfo = () => {
+        const role = getUserRole()
+        const features = getFeatures(role)
+        setUserFeatures(features)
     }
 
     const handleChange = (e) => {
@@ -51,7 +62,11 @@ const ProfilePage = () => {
         setError('')
 
         try {
-            localStorage.setItem('user', JSON.stringify(user))
+            // Update user in localStorage
+            const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
+            const updatedUser = { ...currentUser, ...user }
+            localStorage.setItem('user', JSON.stringify(updatedUser))
+
             setMessage('✅ Profile updated successfully!')
             setLoading(false)
             setTimeout(() => setMessage(''), 3000)
@@ -120,6 +135,7 @@ const ProfilePage = () => {
     const handleExportData = () => {
         const data = {
             user: JSON.parse(localStorage.getItem('user') || '{}'),
+            registeredUsers: JSON.parse(localStorage.getItem('registeredUsers') || '[]'),
             exportDate: new Date().toISOString()
         }
 
@@ -130,6 +146,16 @@ const ProfilePage = () => {
         a.download = `user-data-${new Date().toISOString().split('T')[0]}.json`
         a.click()
         URL.revokeObjectURL(url)
+        alert('✅ Data exported successfully!')
+    }
+
+    const getRoleBadgeColor = (role) => {
+        const colors = {
+            'Admin': 'danger',
+            'Manager': 'warning',
+            'User': 'info'
+        }
+        return colors[role] || 'secondary'
     }
 
     const renderProfileTab = () => (
@@ -193,7 +219,12 @@ const ProfilePage = () => {
                                 style={{ backgroundColor: '#e9ecef' }}
                             />
                         </div>
-                        <small className="text-muted">Role cannot be changed</small>
+                        <small className="text-muted">
+                            <span className={`badge bg-${getRoleBadgeColor(user.role)}`}>
+                                {user.role}
+                            </span>
+                            {' '} - Role cannot be changed
+                        </small>
                     </div>
                 </div>
 
@@ -274,103 +305,139 @@ const ProfilePage = () => {
         </div>
     )
 
-    const renderSettingsTab = () => (
-        <div className="card-body">
-            <div className="mb-4">
-                <h5><FaPalette className="me-2" /> Theme Preferences</h5>
-                <div className="row mt-3">
-                    <div className="col-md-6">
-                        <div className="form-check">
+    const renderSettingsTab = () => {
+        const roleInfo = getRoleInfo(userRole)
+
+        return (
+            <div className="card-body">
+                {/* Role Information */}
+                <div className="alert alert-info">
+                    <strong>👤 Your Role: </strong>
+                    <span className={`badge bg-${roleInfo.color}`}>
+                        {roleInfo.icon} {roleInfo.label}
+                    </span>
+                    <br />
+                    <small className="text-muted">
+                        You have access to {userFeatures.length} features
+                    </small>
+                </div>
+
+                {/* Theme Preferences */}
+                <div className="mb-4">
+                    <h5><FaPalette className="me-2" /> Theme Preferences</h5>
+                    <div className="row mt-3">
+                        <div className="col-md-6">
+                            <div className="form-check">
+                                <input
+                                    type="radio"
+                                    className="form-check-input"
+                                    name="theme"
+                                    id="themeLight"
+                                    value="light"
+                                    checked={theme === 'light'}
+                                    onChange={toggleTheme}
+                                />
+                                <label className="form-check-label" htmlFor="themeLight">
+                                    ☀️ Light Mode
+                                </label>
+                            </div>
+                            <div className="form-check">
+                                <input
+                                    type="radio"
+                                    className="form-check-input"
+                                    name="theme"
+                                    id="themeDark"
+                                    value="dark"
+                                    checked={theme === 'dark'}
+                                    onChange={toggleTheme}
+                                />
+                                <label className="form-check-label" htmlFor="themeDark">
+                                    🌙 Dark Mode
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <small className="text-muted mt-2 d-block">
+                        Current theme: <strong>{theme === 'dark' ? '🌙 Dark' : '☀️ Light'}</strong>
+                    </small>
+                </div>
+
+                <hr />
+
+                {/* Your Features */}
+                <div className="mb-4">
+                    <h5>🔐 Your Access Features</h5>
+                    <div className="row mt-2">
+                        {userFeatures.map((feature, index) => (
+                            <div key={index} className="col-md-4 col-lg-3 mb-2">
+                                <span className="badge bg-success d-flex align-items-center p-2">
+                                    <FaCheckCircle className="me-1" />
+                                    {feature.charAt(0).toUpperCase() + feature.slice(1)}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <hr />
+
+                {/* Notifications */}
+                <div className="mb-4">
+                    <h5><FaBell className="me-2" /> Notification Preferences</h5>
+                    <div className="mt-3">
+                        <div className="form-check form-switch mb-2">
                             <input
-                                type="radio"
+                                type="checkbox"
                                 className="form-check-input"
-                                name="theme"
-                                id="themeLight"
-                                value="light"
-                                checked={theme === 'light'}
-                                onChange={toggleTheme}
+                                id="notifyStock"
+                                defaultChecked
                             />
-                            <label className="form-check-label" htmlFor="themeLight">
-                                ☀️ Light Mode
+                            <label className="form-check-label" htmlFor="notifyStock">
+                                Low Stock Alerts
                             </label>
                         </div>
-                        <div className="form-check">
+                        <div className="form-check form-switch mb-2">
                             <input
-                                type="radio"
+                                type="checkbox"
                                 className="form-check-input"
-                                name="theme"
-                                id="themeDark"
-                                value="dark"
-                                checked={theme === 'dark'}
-                                onChange={toggleTheme}
+                                id="notifySales"
+                                defaultChecked
                             />
-                            <label className="form-check-label" htmlFor="themeDark">
-                                🌙 Dark Mode
+                            <label className="form-check-label" htmlFor="notifySales">
+                                New Sales Notifications
+                            </label>
+                        </div>
+                        <div className="form-check form-switch mb-2">
+                            <input
+                                type="checkbox"
+                                className="form-check-input"
+                                id="notifyPurchase"
+                                defaultChecked
+                            />
+                            <label className="form-check-label" htmlFor="notifyPurchase">
+                                Purchase Confirmations
                             </label>
                         </div>
                     </div>
                 </div>
-                <small className="text-muted mt-2 d-block">
-                    Current theme: <strong>{theme === 'dark' ? '🌙 Dark' : '☀️ Light'}</strong>
-                </small>
-            </div>
 
-            <hr />
+                <hr />
 
-            <div className="mb-4">
-                <h5><FaBell className="me-2" /> Notification Preferences</h5>
-                <div className="mt-3">
-                    <div className="form-check form-switch mb-2">
-                        <input
-                            type="checkbox"
-                            className="form-check-input"
-                            id="notifyStock"
-                            defaultChecked
-                        />
-                        <label className="form-check-label" htmlFor="notifyStock">
-                            Low Stock Alerts
-                        </label>
-                    </div>
-                    <div className="form-check form-switch mb-2">
-                        <input
-                            type="checkbox"
-                            className="form-check-input"
-                            id="notifySales"
-                            defaultChecked
-                        />
-                        <label className="form-check-label" htmlFor="notifySales">
-                            New Sales Notifications
-                        </label>
-                    </div>
-                    <div className="form-check form-switch mb-2">
-                        <input
-                            type="checkbox"
-                            className="form-check-input"
-                            id="notifyPurchase"
-                            defaultChecked
-                        />
-                        <label className="form-check-label" htmlFor="notifyPurchase">
-                            Purchase Confirmations
-                        </label>
+                {/* Data Management */}
+                <div className="mb-4">
+                    <h5>🔄 Data Management</h5>
+                    <div className="mt-3">
+                        <button className="btn btn-outline-danger me-2" onClick={handleClearData}>
+                            🗑️ Clear All Data
+                        </button>
+                        <button className="btn btn-outline-success" onClick={handleExportData}>
+                            📥 Export My Data
+                        </button>
                     </div>
                 </div>
             </div>
-
-            <hr />
-
-            <div className="mb-4">
-                <h5>🔄 Data Management</h5>
-                <div className="mt-3">
-                    <button className="btn btn-outline-danger me-2" onClick={handleClearData}>
-                        🗑️ Clear All Data
-                    </button>
-                    <button className="btn btn-outline-success" onClick={handleExportData}>
-                        📥 Export My Data
-                    </button>
-                </div>
-            </div>
-        </div>
-    )
+        )
+    }
 
     return (
         <div className="row">

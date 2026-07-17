@@ -14,7 +14,7 @@
 	</parent>
 
 	<groupId>com.ims</groupId>
-	<artifactId>inventory-management-system</artifactId>
+	<artifactId>sism</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>Inventory Management System</name>
 	<description>Inventory Management System using Spring Boot</description>

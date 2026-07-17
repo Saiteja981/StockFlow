@@ -7,11 +7,20 @@ const PurchasesPage = () => {
     productId: '',
     quantity: '',
     purchasePrice: '',
-    purchaseDate: new Date().toISOString().split('T')[0]
+    purchaseDate: new Date().toISOString().split('T')[0],
+    supplierId: '',
+    supplierName: ''
   })
   const [products, setProducts] = useState([])
   const [purchaseList, setPurchaseList] = useState([])
   const [loading, setLoading] = useState(false)
+
+  const [suppliers, setSuppliers] = useState([
+    { id: 1, name: 'Apple Inc.', contact: 'John Doe', email: 'supplier@apple.com' },
+    { id: 2, name: 'Dell Technologies', contact: 'Jane Smith', email: 'supplier@dell.com' },
+    { id: 3, name: 'Sony Corporation', contact: 'Bob Johnson', email: 'supplier@sony.com' },
+    { id: 4, name: 'Samsung Electronics', contact: 'Alice Brown', email: 'supplier@samsung.com' },
+  ])
 
   useEffect(() => {
     fetchProducts()
@@ -36,6 +45,36 @@ const PurchasesPage = () => {
     }
   }
 
+  const handleProductChange = (e) => {
+    const productId = e.target.value
+    const selectedProduct = products.find(p => (p.id || p.productId) == productId)
+
+    if (selectedProduct) {
+      setPurchase({
+        ...purchase,
+        productId: productId,
+        purchasePrice: selectedProduct.purchasePrice || 0
+      })
+    } else {
+      setPurchase({
+        ...purchase,
+        productId: productId,
+        purchasePrice: ''
+      })
+    }
+  }
+
+  const handleSupplierChange = (e) => {
+    const supplierId = e.target.value
+    const selectedSupplier = suppliers.find(s => s.id == supplierId)
+
+    setPurchase({
+      ...purchase,
+      supplierId: supplierId,
+      supplierName: selectedSupplier ? selectedSupplier.name : ''
+    })
+  }
+
   const handleChange = (e) => {
     setPurchase({
       ...purchase,
@@ -51,14 +90,18 @@ const PurchasesPage = () => {
         productId: parseInt(purchase.productId),
         quantity: parseInt(purchase.quantity),
         purchasePrice: parseFloat(purchase.purchasePrice),
-        purchaseDate: purchase.purchaseDate
+        purchaseDate: purchase.purchaseDate,
+        supplierId: parseInt(purchase.supplierId) || null,
+        supplierName: purchase.supplierName || ''
       })
       fetchPurchases()
       setPurchase({
         productId: '',
         quantity: '',
         purchasePrice: '',
-        purchaseDate: new Date().toISOString().split('T')[0]
+        purchaseDate: new Date().toISOString().split('T')[0],
+        supplierId: '',
+        supplierName: ''
       })
       alert('Purchase saved successfully!')
     } catch (error) {
@@ -66,6 +109,16 @@ const PurchasesPage = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  const getProductName = (id) => {
+    const product = products.find(p => (p.id || p.productId) == id)
+    return product ? (product.name || product.productName) : 'N/A'
+  }
+
+  const getSupplierName = (id) => {
+    const supplier = suppliers.find(s => s.id == id)
+    return supplier ? supplier.name : 'N/A'
   }
 
   return (
@@ -83,17 +136,44 @@ const PurchasesPage = () => {
                       className="form-select"
                       name="productId"
                       value={purchase.productId}
-                      onChange={handleChange}
+                      onChange={handleProductChange}
                       required
                   >
                     <option value="">-- Select Product --</option>
                     {products.map((p) => (
                         <option key={p.id || p.productId} value={p.id || p.productId}>
-                          {p.name || p.productName}
+                          {p.name || p.productName} (Stock: {p.stock || p.stockQuantity || 0})
                         </option>
                     ))}
                   </select>
                 </div>
+
+                <div className="col-md-6">
+                  <label className="form-label">Supplier</label>
+                  <select
+                      className="form-select"
+                      name="supplierId"
+                      value={purchase.supplierId}
+                      onChange={handleSupplierChange}
+                  >
+                    <option value="">-- Select Supplier --</option>
+                    {suppliers.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                    ))}
+                  </select>
+                  {purchase.supplierId && (
+                      <small className="text-muted">
+                        ✅ Supplier selected: {purchase.supplierName}
+                      </small>
+                  )}
+                </div>
+              </div>
+
+              <br />
+
+              <div className="row">
                 <div className="col-md-6">
                   <label className="form-label">Quantity</label>
                   <input
@@ -103,11 +183,9 @@ const PurchasesPage = () => {
                       value={purchase.quantity}
                       onChange={handleChange}
                       required
+                      min="1"
                   />
                 </div>
-              </div>
-              <br />
-              <div className="row">
                 <div className="col-md-6">
                   <label className="form-label">Purchase Price</label>
                   <input
@@ -118,8 +196,20 @@ const PurchasesPage = () => {
                       value={purchase.purchasePrice}
                       onChange={handleChange}
                       required
+                      readOnly={!!purchase.productId}
+                      style={{ backgroundColor: purchase.productId ? '#e9ecef' : 'white' }}
                   />
+                  {purchase.productId && (
+                      <small className="text-muted">
+                        💡 Auto-filled from product database
+                      </small>
+                  )}
                 </div>
+              </div>
+
+              <br />
+
+              <div className="row">
                 <div className="col-md-6">
                   <label className="form-label">Purchase Date</label>
                   <input
@@ -132,7 +222,9 @@ const PurchasesPage = () => {
                   />
                 </div>
               </div>
+
               <br />
+
               <div className="text-center">
                 <button type="submit" className="btn btn-success" disabled={loading}>
                   {loading ? 'Saving...' : 'Save Purchase'}
@@ -157,21 +249,25 @@ const PurchasesPage = () => {
           <div className="card-body">
             <div className="table-responsive">
               <table className="table table-bordered table-hover">
+                {/* ✅ FIXED: No extra whitespace in thead */}
                 <thead className="table-warning">
                 <tr>
                   <th>Purchase ID</th>
                   <th>Product Name</th>
+                  <th>Supplier</th>
                   <th>Quantity</th>
                   <th>Purchase Price</th>
                   <th>Total Cost</th>
                   <th>Purchase Date</th>
                 </tr>
                 </thead>
+                {/* ✅ FIXED: No extra whitespace in tbody */}
                 <tbody>
                 {purchaseList.map((p) => (
                     <tr key={p.id || p.purchaseId}>
                       <td>{p.id || p.purchaseId}</td>
-                      <td>{p.productName || p.product?.name || 'N/A'}</td>
+                      <td>{p.productName || getProductName(p.productId) || 'N/A'}</td>
+                      <td>{p.supplierName || getSupplierName(p.supplierId) || 'N/A'}</td>
                       <td>{p.quantity}</td>
                       <td>${p.purchasePrice}</td>
                       <td>${p.totalCost || (p.quantity * p.purchasePrice)}</td>

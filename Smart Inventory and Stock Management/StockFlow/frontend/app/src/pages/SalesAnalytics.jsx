@@ -7,10 +7,14 @@ import CategoryChart from '../components/charts/CategoryChart'
 import RevenueChart from '../components/charts/RevenueChart'
 import ExportButton from '../components/reports/ExportButton'
 import ReportFilters from '../components/reports/ReportFilters'
-import { formatCurrency, formatDate } from '../utils/exportUtils'
+import { formatDate } from '../utils/exportUtils'
+import { useCurrency } from '../context/CurrencyContext'
+import { formatCurrency } from '../utils/currencyUtils'
 
 const SalesAnalytics = () => {
+    const { currency } = useCurrency() // ✅ Get current currency
     const [loading, setLoading] = useState(true)
+    const [allSalesData, setAllSalesData] = useState([])
     const [salesData, setSalesData] = useState([])
     const [products, setProducts] = useState([])
     const [purchases, setPurchases] = useState([])
@@ -18,7 +22,7 @@ const SalesAnalytics = () => {
         startDate: '',
         endDate: '',
         reportType: 'sales',
-        groupBy: 'month'
+        groupBy: 'day'
     })
 
     const [stats, setStats] = useState({
@@ -41,6 +45,12 @@ const SalesAnalytics = () => {
         fetchData()
     }, [])
 
+    useEffect(() => {
+        if (allSalesData.length > 0) {
+            applyFilters()
+        }
+    }, [filters, allSalesData])
+
     const fetchData = async () => {
         try {
             const [salesRes, productsRes, purchasesRes] = await Promise.all([
@@ -49,6 +59,7 @@ const SalesAnalytics = () => {
                 purchaseApi.getAll()
             ])
 
+            setAllSalesData(salesRes.data)
             setSalesData(salesRes.data)
             setProducts(productsRes.data)
             setPurchases(purchasesRes.data)
@@ -61,6 +72,25 @@ const SalesAnalytics = () => {
             console.error('Error fetching analytics data:', error)
             setLoading(false)
         }
+    }
+
+    const applyFilters = () => {
+        let filtered = [...allSalesData]
+
+        if (filters.startDate && filters.endDate) {
+            const start = new Date(filters.startDate)
+            const end = new Date(filters.endDate)
+            end.setHours(23, 59, 59)
+
+            filtered = filtered.filter(s => {
+                const saleDate = new Date(s.salesDate)
+                return saleDate >= start && saleDate <= end
+            })
+        }
+
+        setSalesData(filtered)
+        calculateStats(filtered, products)
+        prepareChartData(filtered, products)
     }
 
     const calculateStats = (sales, products) => {
@@ -79,10 +109,23 @@ const SalesAnalytics = () => {
     }
 
     const prepareChartData = (sales, products) => {
+        const groupBy = filters.groupBy || 'day'
         const salesByDate = {}
+
         sales.forEach(s => {
-            const date = new Date(s.salesDate).toLocaleDateString()
-            salesByDate[date] = (salesByDate[date] || 0) + (s.totalAmount || 0)
+            let dateKey
+            const saleDate = new Date(s.salesDate)
+
+            if (groupBy === 'month') {
+                dateKey = saleDate.toLocaleString('default', { month: 'short', year: 'numeric' })
+            } else if (groupBy === 'week') {
+                const weekNumber = getWeekNumber(saleDate)
+                dateKey = `Week ${weekNumber}`
+            } else {
+                dateKey = saleDate.toLocaleDateString()
+            }
+
+            salesByDate[dateKey] = (salesByDate[dateKey] || 0) + (s.totalAmount || 0)
         })
 
         const sortedDates = Object.keys(salesByDate).sort()
@@ -95,12 +138,20 @@ const SalesAnalytics = () => {
         })
 
         setChartData({
-            sales: salesValues.length > 0 ? salesValues.slice(-7) : [0, 0, 0, 0, 0, 0, 0],
-            labels: sortedDates.length > 0 ? sortedDates.slice(-7) : ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'],
+            sales: salesValues.length > 0 ? salesValues : [0],
+            labels: sortedDates.length > 0 ? sortedDates : ['No Data'],
             categories: Object.values(categoryCount),
             categoryLabels: Object.keys(categoryCount),
-            revenue: salesValues.length > 0 ? salesValues.slice(-7) : [0, 0, 0, 0, 0, 0, 0]
+            revenue: salesValues.length > 0 ? salesValues : [0]
         })
+    }
+
+    const getWeekNumber = (date) => {
+        const d = new Date(date)
+        d.setHours(0, 0, 0, 0)
+        d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7)
+        const week1 = new Date(d.getFullYear(), 0, 4)
+        return 1 + Math.round(((d - week1) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7)
     }
 
     const handleFilterChange = (newFilters) => {
@@ -180,7 +231,7 @@ const SalesAnalytics = () => {
                     Sales Analytics
                 </h2>
                 <div className="d-flex gap-2">
-                    {salesData.length === 0 && (
+                    {allSalesData.length === 0 && (
                         <button
                             className="btn btn-outline-primary"
                             onClick={addSampleData}
@@ -202,6 +253,14 @@ const SalesAnalytics = () => {
             </div>
 
             <ReportFilters onFilterChange={handleFilterChange} />
+
+            {filters.startDate && filters.endDate && (
+                <div className="alert alert-info">
+                    📊 Showing data from <strong>{formatDate(filters.startDate)}</strong> to <strong>{formatDate(filters.endDate)}</strong>
+                    <span className="ms-2 badge bg-primary">{salesData.length} records</span>
+                    <span className="ms-2 badge bg-secondary">Grouped by: {filters.groupBy}</span>
+                </div>
+            )}
 
             {/* Stats Cards */}
             <div className="row mb-4">
@@ -225,7 +284,8 @@ const SalesAnalytics = () => {
                             <div className="d-flex justify-content-between align-items-center">
                                 <div>
                                     <h6 className="card-title">Total Revenue</h6>
-                                    <h2 className="card-text">{formatCurrency(stats.totalRevenue)}</h2>
+                                    {/* ✅ Format revenue with currency */}
+                                    <h2 className="card-text">{formatCurrency(stats.totalRevenue, currency)}</h2>
                                 </div>
                                 <FaDollarSign size={40} opacity={0.5} />
                             </div>
@@ -239,7 +299,8 @@ const SalesAnalytics = () => {
                             <div className="d-flex justify-content-between align-items-center">
                                 <div>
                                     <h6 className="card-title">Avg Order Value</h6>
-                                    <h2 className="card-text">{formatCurrency(stats.averageOrderValue)}</h2>
+                                    {/* ✅ Format average order value with currency */}
+                                    <h2 className="card-text">{formatCurrency(stats.averageOrderValue, currency)}</h2>
                                 </div>
                                 <FaChartLine size={40} opacity={0.5} />
                             </div>
@@ -265,8 +326,12 @@ const SalesAnalytics = () => {
             {/* No Data Message */}
             {salesData.length === 0 && (
                 <div className="alert alert-info text-center">
-                    <h4>📊 No Sales Data Yet</h4>
-                    <p>Add some products and record sales to see analytics.</p>
+                    <h4>📊 No Sales Data Found</h4>
+                    <p>
+                        {filters.startDate && filters.endDate ?
+                            'No sales found for the selected date range. Try adjusting your filters.' :
+                            'Add some products and record sales to see analytics.'}
+                    </p>
                     <Link to="/addProduct" className="btn btn-primary me-2">
                         ➕ Add Product
                     </Link>
@@ -296,7 +361,7 @@ const SalesAnalytics = () => {
                                     <SalesChart
                                         data={chartData.sales}
                                         labels={chartData.labels}
-                                        title="Last 7 Days"
+                                        title={`${chartData.labels.length} Records`}
                                     />
                                 </div>
                             </div>
@@ -327,7 +392,7 @@ const SalesAnalytics = () => {
                                     <RevenueChart
                                         data={chartData.revenue}
                                         labels={chartData.labels}
-                                        title="Daily Revenue & Profit"
+                                        title={`Revenue & Profit (${chartData.labels.length} records)`}
                                     />
                                 </div>
                             </div>
@@ -339,6 +404,7 @@ const SalesAnalytics = () => {
                         <div className="card-header bg-white">
                             <div className="d-flex justify-content-between align-items-center">
                                 <h5 className="mb-0">Recent Sales</h5>
+                                <span className="badge bg-primary">{salesData.length} records</span>
                             </div>
                         </div>
                         <div className="card-body p-0">
@@ -361,7 +427,8 @@ const SalesAnalytics = () => {
                                             <td>{sale.productName || sale.product?.name || 'N/A'}</td>
                                             <td>{sale.customerName || 'N/A'}</td>
                                             <td>{sale.quantitySold}</td>
-                                            <td>{formatCurrency(sale.totalAmount || sale.quantitySold * sale.sellingPrice)}</td>
+                                            {/* ✅ Format amount with currency */}
+                                            <td>{formatCurrency(sale.totalAmount || sale.quantitySold * sale.sellingPrice, currency)}</td>
                                             <td>{formatDate(sale.salesDate)}</td>
                                         </tr>
                                     ))}

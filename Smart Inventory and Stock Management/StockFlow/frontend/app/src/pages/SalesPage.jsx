@@ -32,8 +32,29 @@ const SalesPage = () => {
         try {
             const response = await salesApi.getAll()
             setSalesList(response.data)
+            console.log('📊 Sales data:', response.data) // Debug: Check totalAmount
         } catch (error) {
             console.error('Error fetching sales:', error)
+        }
+    }
+
+    // ✅ Handle product selection - auto-fill selling price
+    const handleProductChange = (e) => {
+        const productId = e.target.value
+        const selectedProduct = products.find(p => (p.id || p.productId) == productId)
+
+        if (selectedProduct) {
+            setSales({
+                ...sales,
+                productId: productId,
+                sellingPrice: selectedProduct.sellingPrice || 0
+            })
+        } else {
+            setSales({
+                ...sales,
+                productId: productId,
+                sellingPrice: ''
+            })
         }
     }
 
@@ -48,14 +69,19 @@ const SalesPage = () => {
         e.preventDefault()
         setLoading(true)
         try {
+            const quantity = parseInt(sales.quantitySold)
+            const price = parseFloat(sales.sellingPrice)
+
             await salesApi.create({
                 productId: parseInt(sales.productId),
                 customerName: sales.customerName,
-                quantitySold: parseInt(sales.quantitySold),
-                sellingPrice: parseFloat(sales.sellingPrice),
+                quantitySold: quantity,
+                sellingPrice: price,
                 salesDate: sales.salesDate
+                // ✅ totalAmount is calculated in backend
             })
-            fetchSales()
+
+            await fetchSales() // Refresh the list
             setSales({
                 productId: '',
                 customerName: '',
@@ -63,12 +89,24 @@ const SalesPage = () => {
                 sellingPrice: '',
                 salesDate: new Date().toISOString().split('T')[0]
             })
-            alert('Sales saved successfully!')
+            alert('✅ Sales saved successfully!')
         } catch (error) {
-            alert('Failed to save sales')
+            alert('❌ Failed to save sales')
         } finally {
             setLoading(false)
         }
+    }
+
+    // ✅ Helper to get product name
+    const getProductName = (id) => {
+        const product = products.find(p => (p.id || p.productId) == id)
+        return product ? (product.name || product.productName) : 'N/A'
+    }
+
+    // ✅ Get available stock
+    const getAvailableStock = () => {
+        const product = products.find(p => (p.id || p.productId) == sales.productId)
+        return product ? (product.stock || product.stockQuantity || 0) : 0
     }
 
     return (
@@ -86,13 +124,14 @@ const SalesPage = () => {
                                     className="form-select"
                                     name="productId"
                                     value={sales.productId}
-                                    onChange={handleChange}
+                                    onChange={handleProductChange}
                                     required
                                 >
                                     <option value="">-- Select Product --</option>
                                     {products.map((p) => (
                                         <option key={p.id || p.productId} value={p.id || p.productId}>
-                                            {p.name || p.productName} (Stock: {p.stock || p.stockQuantity})
+                                            {p.name || p.productName}
+                                            (Stock: {p.stock || p.stockQuantity || 0})
                                         </option>
                                     ))}
                                 </select>
@@ -120,7 +159,14 @@ const SalesPage = () => {
                                     value={sales.quantitySold}
                                     onChange={handleChange}
                                     required
+                                    min="1"
+                                    max={getAvailableStock()}
                                 />
+                                {sales.productId && (
+                                    <small className="text-muted">
+                                        Available: {getAvailableStock()} units
+                                    </small>
+                                )}
                             </div>
                             <div className="col-md-4">
                                 <label className="form-label">Selling Price</label>
@@ -132,7 +178,14 @@ const SalesPage = () => {
                                     value={sales.sellingPrice}
                                     onChange={handleChange}
                                     required
+                                    readOnly={!!sales.productId}
+                                    style={{ backgroundColor: sales.productId ? '#e9ecef' : 'white' }}
                                 />
+                                {sales.productId && (
+                                    <small className="text-muted">
+                                        💡 Auto-filled from product database
+                                    </small>
+                                )}
                             </div>
                             <div className="col-md-4">
                                 <label className="form-label">Sales Date</label>
@@ -176,25 +229,57 @@ const SalesPage = () => {
                                 <th>Sales ID</th>
                                 <th>Product Name</th>
                                 <th>Customer</th>
-                                <th>Quantity Sold</th>
-                                <th>Selling Price</th>
+                                <th>Quantity</th>
+                                <th>Unit Price</th>
                                 <th>Total Amount</th>
                                 <th>Sales Date</th>
                             </tr>
                             </thead>
                             <tbody>
-                            {salesList.map((s) => (
-                                <tr key={s.id || s.salesId}>
-                                    <td>{s.id || s.salesId}</td>
-                                    <td>{s.productName || s.product?.name || 'N/A'}</td>
-                                    <td>{s.customerName}</td>
-                                    <td>{s.quantitySold}</td>
-                                    <td>${s.sellingPrice}</td>
-                                    <td>${s.totalAmount || (s.quantitySold * s.sellingPrice)}</td>
-                                    <td>{new Date(s.salesDate).toLocaleDateString()}</td>
+                            {salesList.length === 0 ? (
+                                <tr>
+                                    <td colSpan="7" className="text-center text-muted">
+                                        No sales recorded yet
+                                    </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                salesList.map((s) => {
+                                    // ✅ Calculate total if not present
+                                    const total = s.totalAmount || (s.quantitySold * s.sellingPrice)
+                                    return (
+                                        <tr key={s.id || s.salesId}>
+                                            <td>#{s.id || s.salesId}</td>
+                                            <td>{s.productName || getProductName(s.productId) || 'N/A'}</td>
+                                            <td>{s.customerName}</td>
+                                            <td>{s.quantitySold}</td>
+                                            <td>${s.sellingPrice}</td>
+                                            <td>
+                                                <strong className="text-success">
+                                                    ${total.toFixed(2)}
+                                                </strong>
+                                            </td>
+                                            <td>{new Date(s.salesDate).toLocaleDateString()}</td>
+                                        </tr>
+                                    )
+                                })
+                            )}
                             </tbody>
+                            {/* ✅ Total Summary Row */}
+                            {salesList.length > 0 && (
+                                <tfoot className="table-dark">
+                                <tr>
+                                    <td colSpan="3" className="text-end fw-bold">Total:</td>
+                                    <td>
+                                        {salesList.reduce((sum, s) => sum + (s.quantitySold || 0), 0)}
+                                    </td>
+                                    <td></td>
+                                    <td className="fw-bold text-success">
+                                        ${salesList.reduce((sum, s) => sum + (s.totalAmount || s.quantitySold * s.sellingPrice || 0), 0).toFixed(2)}
+                                    </td>
+                                    <td></td>
+                                </tr>
+                                </tfoot>
+                            )}
                         </table>
                     </div>
                 </div>

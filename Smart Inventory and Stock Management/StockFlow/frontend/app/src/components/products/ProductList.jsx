@@ -9,10 +9,13 @@ import Pagination from '../common/Pagination'
 import LowStockAlert from '../common/LowStockAlert'
 import BarcodeGenerator from './BarcodeGenerator'
 import BarcodeScanner from './BarcodeScanner'
+import { useCurrency } from '../../context/CurrencyContext'
+import { formatCurrency } from '../../utils/currencyUtils'
 import 'react-toastify/dist/ReactToastify.css'
 
 const ProductList = () => {
     const navigate = useNavigate()
+    const { currency } = useCurrency() // ✅ Get current currency
     const [products, setProducts] = useState([])
     const [filteredProducts, setFilteredProducts] = useState([])
     const [loading, setLoading] = useState(true)
@@ -166,6 +169,7 @@ const ProductList = () => {
         navigate('/checkout', {
             state: {
                 amount: price,
+                currency: currency, // ✅ Pass currency to checkout
                 items: [
                     {
                         name: name,
@@ -279,8 +283,14 @@ const ProductList = () => {
                                         </td>
                                         <td>{product.category || 'N/A'}</td>
                                         <td>{product.brand || 'N/A'}</td>
-                                        <td>${product.purchasePrice || 0}</td>
-                                        <td>${product.sellingPrice || 0}</td>
+                                        <td>
+                                            {/* ✅ Format purchase price with currency */}
+                                            {formatCurrency(product.purchasePrice || 0, currency)}
+                                        </td>
+                                        <td>
+                                            {/* ✅ Format selling price with currency */}
+                                            {formatCurrency(product.sellingPrice || 0, currency)}
+                                        </td>
                                         <td>
                                                 <span className={`badge ${badgeClass}`}>
                                                     {stock}
@@ -292,7 +302,7 @@ const ProductList = () => {
                                                 </span>
                                         </td>
                                         <td>
-                                            {/* ✅ Buy Now Button - NEW */}
+                                            {/* Buy Now Button */}
                                             <button
                                                 className="btn btn-success btn-sm me-1"
                                                 onClick={() => handleCheckout(product)}

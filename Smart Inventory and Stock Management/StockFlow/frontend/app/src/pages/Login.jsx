@@ -26,30 +26,48 @@ const Login = () => {
         try {
             console.log('🔐 Login attempt with:', formData)
 
-            // ✅ Set login state
-            localStorage.setItem('isLoggedIn', 'true')
-            localStorage.setItem('user', JSON.stringify({
-                name: 'Admin',
-                email: formData.email,
-                phone: '+1 234 567 8900',
-                role: 'Admin'
-            }))
+            // ✅ Get registered users from localStorage
+            const users = JSON.parse(localStorage.getItem('registeredUsers') || '[]')
 
-            console.log('✅ Login successful - localStorage set')
-            console.log('📦 isLoggedIn:', localStorage.getItem('isLoggedIn'))
-            console.log('👤 user:', localStorage.getItem('user'))
+            console.log('📊 Registered users:', users) // Debug log
 
-            setLoading(false)
+            // ✅ Find user by email
+            const foundUser = users.find(u =>
+                u.email === formData.email && u.password === formData.password
+            )
 
-            // ✅ Navigate to dashboard
-            navigate('/')
+            if (foundUser) {
+                // ✅ Save actual user data
+                localStorage.setItem('isLoggedIn', 'true')
+                localStorage.setItem('user', JSON.stringify({
+                    id: foundUser.id,
+                    name: foundUser.name,        // ✅ Actual user name
+                    email: foundUser.email,
+                    phone: foundUser.phone || '+1 234 567 8900',
+                    role: foundUser.role || 'User'
+                }))
 
-            // ✅ Force reload to update navbar
-            window.location.reload()
+                console.log('✅ Login successful for user:', foundUser.name)
+                console.log('📦 isLoggedIn:', localStorage.getItem('isLoggedIn'))
+                console.log('👤 user:', localStorage.getItem('user'))
+
+                setLoading(false)
+                navigate('/')
+                window.location.reload()
+            } else {
+                // ✅ Check if user exists but password wrong
+                const userExists = users.some(u => u.email === formData.email)
+                if (userExists) {
+                    setError('❌ Invalid password. Please try again.')
+                } else {
+                    setError('❌ User not found. Please register first.')
+                }
+                setLoading(false)
+            }
 
         } catch (error) {
             console.error('❌ Login error:', error)
-            setError('Invalid email or password')
+            setError('❌ Something went wrong. Please try again.')
             setLoading(false)
         }
     }

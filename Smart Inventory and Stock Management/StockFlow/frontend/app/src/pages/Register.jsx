@@ -9,10 +9,12 @@ const Register = () => {
         email: '',
         password: '',
         confirmPassword: '',
-        phone: ''
+        phone: '',
+        role: 'User'  // ✅ Added role field
     })
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
+    const [success, setSuccess] = useState('')
 
     const handleChange = (e) => {
         setFormData({
@@ -25,33 +27,60 @@ const Register = () => {
         e.preventDefault()
         setLoading(true)
         setError('')
+        setSuccess('')
 
         // Validation
         if (formData.password !== formData.confirmPassword) {
-            setError('Passwords do not match')
+            setError('❌ Passwords do not match')
             setLoading(false)
             return
         }
 
         if (formData.password.length < 6) {
-            setError('Password must be at least 6 characters')
+            setError('❌ Password must be at least 6 characters')
             setLoading(false)
             return
         }
 
         try {
-            // Simulate API call - Replace with actual backend call
-            console.log('Registration attempt:', formData)
+            // ✅ Get existing users from localStorage
+            const users = JSON.parse(localStorage.getItem('registeredUsers') || '[]')
 
-            // For demo, accept any registration
-            // In production, call your auth API:
-            // const response = await authApi.register(formData)
+            // ✅ Check if email already registered
+            if (users.some(u => u.email === formData.email)) {
+                setError('❌ This email is already registered. Please login.')
+                setLoading(false)
+                return
+            }
 
+            // ✅ Save new user
+            const newUser = {
+                id: Date.now(),
+                name: formData.name,
+                email: formData.email,
+                password: formData.password,
+                phone: formData.phone || '',
+                role: formData.role || 'User',
+                registeredDate: new Date().toISOString()
+            }
+
+            users.push(newUser)
+            localStorage.setItem('registeredUsers', JSON.stringify(users))
+
+            console.log('✅ User registered:', newUser) // Debug log
+            console.log('📊 Total users:', users.length) // Debug log
+
+            setSuccess('✅ Registration successful! Please login.')
             setLoading(false)
-            alert('Registration successful! Please login.')
-            navigate('/login')
+
+            // ✅ Redirect to login after 2 seconds
+            setTimeout(() => {
+                navigate('/login')
+            }, 2000)
+
         } catch (error) {
-            setError('Registration failed. Please try again.')
+            console.error('Registration error:', error)
+            setError('❌ Registration failed. Please try again.')
             setLoading(false)
         }
     }
@@ -66,9 +95,14 @@ const Register = () => {
                     <div className="card-body" style={{ padding: '30px' }}>
                         {error && (
                             <div className="alert alert-danger alert-dismissible fade show">
-                                <i className="fas fa-exclamation-circle me-2"></i>
                                 {error}
                                 <button type="button" className="btn-close" onClick={() => setError('')}></button>
+                            </div>
+                        )}
+
+                        {success && (
+                            <div className="alert alert-success">
+                                {success}
                             </div>
                         )}
 
@@ -141,18 +175,33 @@ const Register = () => {
                                 </div>
                             </div>
 
-                            <div className="mb-3">
-                                <label className="form-label">Phone Number (Optional)</label>
-                                <div className="input-group">
-                                    <span className="input-group-text"><FaPhone /></span>
-                                    <input
-                                        type="tel"
-                                        className="form-control"
-                                        name="phone"
-                                        value={formData.phone}
+                            <div className="row">
+                                <div className="col-md-6 mb-3">
+                                    <label className="form-label">Phone Number (Optional)</label>
+                                    <div className="input-group">
+                                        <span className="input-group-text"><FaPhone /></span>
+                                        <input
+                                            type="tel"
+                                            className="form-control"
+                                            name="phone"
+                                            value={formData.phone}
+                                            onChange={handleChange}
+                                            placeholder="Enter phone number"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="col-md-6 mb-3">
+                                    <label className="form-label">Role</label>
+                                    <select
+                                        className="form-select"
+                                        name="role"
+                                        value={formData.role}
                                         onChange={handleChange}
-                                        placeholder="Enter phone number"
-                                    />
+                                    >
+                                        <option value="User">User</option>
+                                        <option value="Admin">Admin</option>
+                                        <option value="Manager">Manager</option>
+                                    </select>
                                 </div>
                             </div>
 
